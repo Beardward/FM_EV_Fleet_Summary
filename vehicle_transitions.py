@@ -38,15 +38,50 @@ utv = Vehicle(name="MotoEV UTV", sizes=["Small", "Medium"], weights=["Light", "M
 trike = "Civilized Cycles Semi-Trike"
 
 for x in range(1, 193):
+    # variables
     options = [lightning, box, transit, moto_truck, utv, trike]
     shareable = 0
-    # usage
+    
+    # sheet data
     usage = sheet.cell(x, usage_percent).value
+    out_sharing = sheet.cell(x, outer_sharing).value
+    task_share = sheet.cell(x, outer_tasks).value
+    sched = sheet.cell(x, scheduled).value
+    curr_dist = sheet.cell(x, drive_dist).value
+    curr_size = sheet.cell(x, size).value
+    curr_weight = sheet.cell(x, weight).value
+    
+    # determine shareability/sharepool potential (0-3)
+    if sched != "Unschduled":
+        shareable += 1
+    if task_share != "No":
+        shareable += 1
+    if out_sharing != "No":
+        shareable += 1
+    
+    # refine vehicle options
     for v in options:
         # usage
         if not (v.use_low <= usage <= v.use_high):
             options.remove(v)
-        # sharing
+        # task sharing
+        if not (v.share_tasks.contains(task_share) and v.share_tasks[0] == "Any"):
+            options.remove(v)
+        # scheduling
+        if not (v.scheduling.contains(sched) and v.scheduling[0] == "Any"):
+            options.remove(v)
+        # distances
+        if not (v.dists.contains(curr_dist) and v.dists[0] == "Any"):
+            options.remove(v)
+        # size
+        if not (v.sizes.contains(curr_size)):
+            options.remove(v)
+        # weight
+        if not (v.weights.contains(curr_weight)):
+            options.remove(v)
+            
+    # write selection(s) to sheet
+    
         
 
 '''
