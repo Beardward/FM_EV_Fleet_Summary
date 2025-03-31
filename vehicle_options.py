@@ -18,5 +18,5 @@ class Vehicle:
             # Many FM vehicles were provided with anecdotal evidence detailing vehicle usage undermining the full capabilities of a vehicle. Such values
             # and estimates of "% intended usage" can highlight opportunities for outright downsizing or a mixture of downsizing in addition to an 
             # implemented sharepool vehicle, fulfilling remaining, less-frequent requirements of original vehicle.
-            self.use_low = use_low
-            self.use_high = use_high
+            self.use_low = float(use_low)
+            self.use_high = float(use_high)

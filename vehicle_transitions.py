@@ -5,7 +5,7 @@ from vehicle_options import Vehicle
 # Establish Excel data
 path = "C:\\Users\\cejva\\Documents\\Work\\FM Fleet Vehicles from Interviews_FINAL.xlsx"
 workbook = openpyxl.load_workbook(path)
-sheet = workbook['ALL FM']
+sheet = workbook['raw_input']
 
 # Sheet column values
 department = 1
@@ -30,20 +30,23 @@ v_mods = 29
 
 
 # Define vehicle rec data objects
-lightning = Vehicle(name="Ford F150 Lightning", sizes=["Medium", "Large"], weights=["Heavy", "Heavy Duty"], dists=["Any"], scheduling=["Any"], share_tasks="Any", use_low=60, use_high=100)
-box = Vehicle(name="Peterbilt 220EV", sizes=["Heavy Duty"], weights=["Medium", "Heavy"], dists=["Any"], scheduling=["scheduled", "possible"], share_tasks="Any", use_low=0, use_high=60)
-transit = Vehicle(name="Ford eTransit", sizes=["Medium", "Large"], weights=["Medium", "Heavy", "Heavy Duty"], dists=["Any"], scheduling=["unscheduled", "possible"], share_tasks="Any", use_low=60, use_high=100)
-moto_truck = Vehicle(name="MotoEV Utility Truck", sizes=["Medium", "Large"], weights=["Medium", "Heavy", "Heavy Duty"], dists=["campus-bound", "between campuses"], scheduling=["Any"], share_tasks="Any", use_low=60, use_high=100)
-utv = Vehicle(name="MotoEV UTV", sizes=["Small", "Medium"], weights=["Light", "Medium", "Heavy"], dists=["campus-bound", "between campuses"], scheduling=["Any"], share_tasks="Any", use_low=0, use_high=100)
-trike = "Civilized Cycles Semi-Trike"
+lightning = Vehicle(name="Ford F150 Lightning", sizes=["Medium", "Large"], weights=["Heavy", "Heavy Duty"], dists=["Any"], scheduling=["Any"], share_tasks="Any", use_low=0.60, use_high=1.0)
+box = Vehicle(name="Peterbilt 220EV", sizes=["Heavy Duty"], weights=["Medium", "Heavy"], dists=["Any"], scheduling=["Scheduled", "Possible"], share_tasks="Any", use_low=0.0, use_high=0.60)
+transit = Vehicle(name="Ford eTransit", sizes=["Medium", "Large"], weights=["Medium", "Heavy", "Heavy Duty"], dists=["Any"], scheduling=["Unscheduled", "Possible"], share_tasks="No", use_low=0.60, use_high=1.0)
+moto_truck = Vehicle(name="MotoEV Utility Truck", sizes=["Medium", "Large"], weights=["Medium", "Heavy", "Heavy Duty"], dists=["Campus-bound", "Between campuses"], scheduling=["Any"], share_tasks="Any", use_low=0.60, use_high=1.0)
+utv = Vehicle(name="MotoEV UTV", sizes=["Small", "Medium"], weights=["Light", "Medium", "Heavy"], dists=["Campus-bound", "Between campuses"], scheduling=["Any"], share_tasks="Any", use_low=0, use_high=1.0)
+trike = Vehicle(name="Civilized Cycles Semi-Trike", sizes=["Small", "Medium", "Large"], weights=["Light", "Medium"], dists=["Campus-bound"], scheduling=["Unscheduled", "Possible"], share_tasks="Any", use_low=0, use_high=1.0)
 
-for x in range(1, 193):
-    # variables
-    options = [lightning, box, transit, moto_truck, utv, trike]
+for x in range(2, 193):
+    ### variables
+    # Vehicle Options to recommend at end step
+    options = [trike, utv, moto_truck, box, transit, lightning] # in ascending order of additional infrastructure requirement
+    # Vehicles to remove from final recommendation list
+    removals = []
     shareable = 0
     
     # sheet data
-    usage = sheet.cell(x, usage_percent).value
+    usage = float(sheet.cell(x, usage_percent).value)
     out_sharing = sheet.cell(x, outer_sharing).value
     task_share = sheet.cell(x, outer_tasks).value
     sched = sheet.cell(x, scheduled).value
@@ -52,36 +55,61 @@ for x in range(1, 193):
     curr_weight = sheet.cell(x, weight).value
     
     # determine shareability/sharepool potential (0-3)
-    if sched != "Unschduled":
+    if sched != "Unscheduled":
         shareable += 1
     if task_share != "No":
         shareable += 1
     if out_sharing != "No":
         shareable += 1
-    
+
+    # Peterbilt requires some level of shareability
+    if shareable < 1:
+        removals.append(box.name)
+    #print(sheet.cell(x, make_model).value)
     # refine vehicle options
     for v in options:
+        #print(usage)
+        #print(v.use_high)
+        #print(usage > v.use_high)
         # usage
-        if not (v.use_low <= usage <= v.use_high):
-            options.remove(v)
+        if (v.use_low > usage) or (usage > v.use_high):
+            removals.append(v.name)
         # task sharing
-        if not (v.share_tasks.contains(task_share) and v.share_tasks[0] == "Any"):
-            options.remove(v)
+        elif (task_share not in v.share_tasks) and (v.share_tasks != "Any"):
+            removals.append(v.name)
         # scheduling
-        if not (v.scheduling.contains(sched) and v.scheduling[0] == "Any"):
-            options.remove(v)
+        elif (sched not in v.scheduling) and ("Any" not in v.scheduling):
+            removals.append(v.name)
         # distances
-        if not (v.dists.contains(curr_dist) and v.dists[0] == "Any"):
-            options.remove(v)
+        elif (curr_dist not in v.dists) and ("Any" not in v.dists):
+            removals.append(v.name)
         # size
-        if not (v.sizes.contains(curr_size)):
-            options.remove(v)
+        elif curr_size not in v.sizes:
+            removals.append(v.name)
         # weight
-        if not (v.weights.contains(curr_weight)):
+        elif curr_weight not in v.weights:
+            removals.append(v.name)
+
+    # remove unfit recommendations
+    for v in options:
+        if removals.count(v.name) > 0:
             options.remove(v)
-            
+
     # write selection(s) to sheet
-    
+    init_col = 32
+    if options.__sizeof__() == 1:
+        sheet.cell(x, 32).value = options[0].name
+        init_col += 1
+    else:
+        for v in options:
+            print(v.name)
+            sheet.cell(x, init_col).value = v.name
+            init_col += 1
+    # write vehicle shareability score to sheet
+    sheet.cell(x, init_col).value = shareable
+
+    # SAVE
+    #workbook.save(path)
         
 
 '''
